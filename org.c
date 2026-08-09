@@ -4,7 +4,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "ogz_types.h"
+#include "org_types.h"
 #include "org_ext.h"
 #include "org_size.h"
 #include "org_dur.h"
