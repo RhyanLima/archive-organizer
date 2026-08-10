@@ -43,7 +43,7 @@ Ele percorre o vetor `argv` (que contém o que você digitou no terminal).
 * Se encontra `-s`, lê a regra seguinte (ex: `band:50`), faz o cálculo (multiplicando por megabytes) e salva na struct de tamanho.
 
 ### O Loop Principal (`main`)
-Aqui é onde a mágica acontece. A função usa `<dirent.h>` para abrir a pasta que você indicou e começa um loop `while` lendo arquivo por arquivo.
+A função usa `<dirent.h>` para abrir a pasta que você indicou e começa um loop `while` lendo arquivo por arquivo.
 
 **1. Filtro em Cascata:**
 ```c
