@@ -4,14 +4,25 @@
 #include <stdbool.h>
 #include <limits.h>
 
-typedef enum { MODE_NONE, MODE_ALL, MODE_SPECIFIC, MODE_GREATER, MODE_LESS, MODE_RANGE, MODE_BANDS } OrgMode;
+// Tokens
+typedef enum { 
+    MODE_NONE = 0, 
+    MODE_ALL, 
+    MODE_SPECIFIC, 
+    MODE_GREATER, 
+    MODE_LESS, 
+    MODE_RANGE, 
+    MODE_BANDS 
+} OrgMode;
 
+// Extensão
 typedef struct {
     bool active;
     OrgMode mode;
-    char specific_ext[32];
+    char specific_ext[64];
 } ExtConfig;
 
+// Tamanho
 typedef struct {
     bool active;
     OrgMode mode;
@@ -19,6 +30,7 @@ typedef struct {
     long long val2; // Em bytes (usado para RANGE ou tamanho da BAND)
 } SizeConfig;
 
+// Duração
 typedef struct {
     bool active;
     OrgMode mode;
@@ -26,6 +38,7 @@ typedef struct {
     double val2; // Em segundos
 } DurConfig;
 
+// Configuração geral
 typedef struct {
     char target_dir[PATH_MAX];
     ExtConfig ext;
