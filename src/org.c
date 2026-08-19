@@ -9,10 +9,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "org_types.h"
-#include "org_ext.h"
-#include "org_size.h"
-#include "org_dur.h"
+#include "../include/org_types.h"
+#include "../include/org_ext.h"
+#include "../include/org_size.h"
+#include "../include/org_dur.h"
 
 
 #define BYTES_KB 1024LL
@@ -27,32 +27,20 @@ void print_help(void) {
     printf("\n");
 }
 
-
-/* =========================================================
- * DIRETORIO
- * ========================================================= */
-
 void create_dir_if_not_exists(const char *dir) {
     
     struct stat st = {0};
 
     if (stat(dir, &st) == -1) {
 
-        printf("[DIR] Diretorio nao existe.\n");
-
         if (mkdir(dir, 0755) != 0) {
             perror("[DIR] ERRO: mkdir");
             return;
-        }
-
-        printf("[DIR] Diretorio criado com sucesso.\n");
+        }    
 
     } else {
-        
-        if (S_ISDIR(st.st_mode)) {
-            printf("[DIR] Diretorio ja existe.\n");
-        } else {
-            printf("[DIR] ERRO: caminho existe mas nao e diretorio.\n");
+        if (!S_ISDIR(st.st_mode)) {    
+            fprintf(stderr, "[DIR] ERRO: caminho '%s' existe mas nao e diretorio.\n", dir);
         }
     }
 }
@@ -81,116 +69,54 @@ static void trim_spaces(char *str) {
     }
 }
 
-
-/* =========================================================
- * PARSER DE TAMANHO
- *
- * Exemplos:
- *
- * 5M
- * 500K
- * 2G
- * ========================================================= */
-
-static bool parse_size_value(
-    const char *text,
-    long long *out_bytes
-) {
+static bool parse_size_value(const char *text, long long *out_bytes) {
+    
     if (!text || !out_bytes) {
         return false;
     }
 
-
-    printf(
-        "[PARSER][SIZE] Convertendo valor: '%s'\n",
-        text
-    );
-
-
     if (*text == '\0') {
-        printf(
-            "[PARSER][SIZE] ERRO: valor vazio.\n"
-        );
-
+        printf("[PARSER][SIZE] ERRO: valor vazio.\n", text);
         return false;
     }
-
 
     errno = 0;
 
     char *endptr = NULL;
 
-    long long value =
-        strtoll(
-            text,
-            &endptr,
-            10
-        );
-
+    long long value = strtoll(text, &endptr, 10);
 
     if (endptr == text) {
-
-        printf(
-            "[PARSER][SIZE] ERRO: numero invalido.\n"
-        );
-
+        printf("[PARSER][SIZE] ERRO: numero invalido.\n", text);
         return false;
     }
 
 
     if (errno == ERANGE) {
-
-        printf(
-            "[PARSER][SIZE] ERRO: numero fora do limite.\n"
-        );
-
+        printf("[PARSER][SIZE] ERRO: numero fora do limite.\n");
         return false;
     }
-
 
     char unit = '\0';
 
     if (*endptr != '\0') {
-
-        unit =
-            (char)toupper(
-                (unsigned char)*endptr
-            );
+        
+        unit = (char)toupper((unsigned char)*endptr);
 
         endptr++;
 
-        /*
-         * Permite apenas K/M/G.
-         */
-        if (unit != 'K' &&
-            unit != 'M' &&
-            unit != 'G') {
-
-            printf(
-                "[PARSER][SIZE] ERRO: unidade invalida '%c'.\n",
-                unit
-            );
-
+        if (unit != 'K' && unit != 'M' && unit != 'G') {
+            printf("[PARSER][SIZE] ERRO: unidade invalida '%c'.\n", unit);
             return false;
         }
     }
 
-
-    /*
-     * Não aceita lixo depois da unidade.
-     */
     if (*endptr != '\0') {
-
-        printf(
-            "[PARSER][SIZE] ERRO: caracteres invalidos apos unidade.\n"
-        );
-
+        printf("[PARSER][SIZE] ERRO: caracteres invalidos apos unidade.\n");
         return false;
     }
 
-
     long long multiplier = 1;
-
 
     switch (unit) {
 
@@ -211,73 +137,29 @@ static bool parse_size_value(
             break;
     }
 
-
     if (value < 0) {
-
-        printf(
-            "[PARSER][SIZE] ERRO: tamanho negativo.\n"
-        );
-
+        printf("[PARSER][SIZE] ERRO: tamanho negativo.\n");
         return false;
     }
-
 
     if (value > LLONG_MAX / multiplier) {
-
-        printf(
-            "[PARSER][SIZE] ERRO: overflow.\n"
-        );
-
+        printf("[PARSER][SIZE] ERRO: overflow.\n");
         return false;
     }
 
+    *out_bytes = value * multiplier;
 
-    *out_bytes =
-        value * multiplier;
-
-
-    printf(
-        "[PARSER][SIZE] Valor: %lld\n"
-        "[PARSER][SIZE] Unidade: %c\n"
-        "[PARSER][SIZE] Bytes: %lld\n",
-        value,
-        unit ? unit : 'B',
-        *out_bytes
-    );
-
+    
 
     return true;
 }
 
-
-/* =========================================================
- * PARSER DE REGRA DE TAMANHO
- *
- * >5M
- * <10M
- * 5M-15M
- * band:2M
- * ========================================================= */
-
-static bool parse_size_rule(
-    const char *rule,
-    SizeConfig *cfg
-) {
+static bool parse_size_rule(const char *rule, SizeConfig *cfg) {
+    
     if (!rule || !cfg) {
         return false;
     }
-
-
-    printf(
-        "\n[PARSER][SIZE] =================================\n"
-    );
-
-    printf(
-        "[PARSER][SIZE] Regra recebida: '%s'\n",
-        rule
-    );
-
-
+    
     char buffer[256];
 
     snprintf(
@@ -289,244 +171,115 @@ static bool parse_size_rule(
 
     trim_spaces(buffer);
 
-
     if (buffer[0] == '\0') {
-
-        printf(
-            "[PARSER][SIZE] ERRO: regra vazia.\n"
-        );
-
+        printf("[PARSER][SIZE] ERRO: regra vazia.\n");
         return false;
     }
 
+    // BAND
+    if (strncmp(buffer,"band:",5) == 0) {
 
-    /*
-     * BAND
-     */
-    if (strncmp(
-            buffer,
-            "band:",
-            5
-        ) == 0) {
-
-        const char *value =
-            buffer + 5;
-
+        const char *value = buffer + 5;
 
         long long band_size;
 
-
-        if (!parse_size_value(
-                value,
-                &band_size
-            )) {
-
-            printf(
-                "[PARSER][SIZE] ERRO: banda invalida.\n"
-            );
-
+        if (!parse_size_value(value, &band_size)) {
+            printf("[PARSER][SIZE] ERRO: banda invalida.\n");
             return false;
         }
-
 
         if (band_size <= 0) {
-
-            printf(
-                "[PARSER][SIZE] ERRO: banda deve ser > 0.\n"
-            );
-
+            printf("[PARSER][SIZE] ERRO: banda deve ser > 0.\n");
             return false;
         }
-
 
         cfg->mode = MODE_BANDS;
         cfg->val1 = 0;
         cfg->val2 = band_size;
 
-
-        printf(
-            "[PARSER][SIZE] Modo: BANDS\n"
-            "[PARSER][SIZE] Banda: %lld bytes\n",
-            cfg->val2
-        );
-
-
         return true;
     }
 
 
-    /*
-     * GREATER
-     */
+    // GREATER
     if (buffer[0] == '>') {
 
         long long value;
 
-
-        if (!parse_size_value(
-                buffer + 1,
-                &value
-            )) {
-
+        if (!parse_size_value(buffer + 1, &value)) {
             return false;
         }
-
 
         cfg->mode = MODE_GREATER;
         cfg->val1 = value;
         cfg->val2 = 0;
 
-
-        printf(
-            "[PARSER][SIZE] Modo: GREATER\n"
-            "[PARSER][SIZE] val1: %lld bytes\n",
-            cfg->val1
-        );
-
-
         return true;
     }
 
 
-    /*
-     * LESS
-     */
+    // LESS
     if (buffer[0] == '<') {
 
         long long value;
 
-
-        if (!parse_size_value(
-                buffer + 1,
-                &value
-            )) {
-
+        if (!parse_size_value(buffer + 1, &value)) {
             return false;
         }
-
 
         cfg->mode = MODE_LESS;
         cfg->val1 = value;
         cfg->val2 = 0;
 
-
-        printf(
-            "[PARSER][SIZE] Modo: LESS\n"
-            "[PARSER][SIZE] val1: %lld bytes\n",
-            cfg->val1
-        );
-
-
         return true;
     }
 
 
-    /*
-     * RANGE
-     *
-     * Exemplo:
-     *
-     * 5M-15M
-     */
-
-    char *dash =
-        strchr(
-            buffer,
-            '-'
-        );
-
+    // RANGE
+    char *dash = strchr(buffer, '-');
 
     if (dash) {
 
-        /*
-         * Não aceita mais de um '-'.
-         */
-        if (strchr(
-                dash + 1,
-                '-'
-            )) {
-
-            printf(
-                "[PARSER][SIZE] ERRO: faixa invalida.\n"
-            );
-
+        // Não aceita mais de um '-'.
+        if (strchr(dash + 1, '-') ) {
+            printf("[PARSER][SIZE] ERRO: faixa invalida.\n");
             return false;
         }
 
-
         *dash = '\0';
 
-        const char *first =
-            buffer;
-
-        const char *second =
-            dash + 1;
-
+        const char *first = buffer;
+        const char *second = dash + 1;
 
         long long val1;
         long long val2;
 
-
-        if (!parse_size_value(
-                first,
-                &val1
-            )) {
-
+        if (!parse_size_value(first, &val1)) {
             return false;
         }
 
-
-        if (!parse_size_value(
-                second,
-                &val2
-            )) {
-
+        if (!parse_size_value(second, &val2)) {
             return false;
         }
-
 
         if (val1 > val2) {
-
-            printf(
-                "[PARSER][SIZE] ERRO: inicio da faixa maior que fim.\n"
-            );
-
+            printf("[PARSER][SIZE] ERRO: inicio da faixa maior que fim.\n");
             return false;
         }
-
 
         cfg->mode = MODE_RANGE;
         cfg->val1 = val1;
         cfg->val2 = val2;
-
-
-        printf(
-            "[PARSER][SIZE] Modo: RANGE\n"
-            "[PARSER][SIZE] val1: %lld bytes\n"
-            "[PARSER][SIZE] val2: %lld bytes\n",
-            cfg->val1,
-            cfg->val2
-        );
-
-
+        
         return true;
     }
 
-
-    printf(
-        "[PARSER][SIZE] ERRO: regra desconhecida '%s'.\n",
-        buffer
-    );
-
+    printf("[PARSER][SIZE] ERRO: regra desconhecida '%s'.\n", buffer);
 
     return false;
 }
 
-
-/* =========================================================
- * PARSER DE DURACAO
- * ========================================================= */
-
+// PAREI A HIGIENIZAÇÃO AQUI ================================
 static bool parse_duration_value(
     const char *text,
     double *out_seconds
@@ -536,10 +289,7 @@ static bool parse_duration_value(
     }
 
 
-    printf(
-        "[PARSER][DUR] Convertendo valor: '%s'\n",
-        text
-    );
+    
 
 
     errno = 0;
@@ -597,10 +347,7 @@ static bool parse_duration_value(
     *out_seconds = value;
 
 
-    printf(
-        "[PARSER][DUR] Segundos: %.3f\n",
-        *out_seconds
-    );
+    
 
 
     return true;
@@ -625,14 +372,9 @@ static bool parse_duration_rule(
     }
 
 
-    printf(
-        "\n[PARSER][DUR] =================================\n"
-    );
+    
 
-    printf(
-        "[PARSER][DUR] Regra recebida: '%s'\n",
-        rule
-    );
+    
 
 
     char buffer[256];
@@ -693,11 +435,7 @@ static bool parse_duration_rule(
         cfg->val2 = band;
 
 
-        printf(
-            "[PARSER][DUR] Modo: BANDS\n"
-            "[PARSER][DUR] Banda: %.3f segundos\n",
-            cfg->val2
-        );
+        
 
 
         return true;
@@ -726,11 +464,7 @@ static bool parse_duration_rule(
         cfg->val2 = 0;
 
 
-        printf(
-            "[PARSER][DUR] Modo: GREATER\n"
-            "[PARSER][DUR] val1: %.3f segundos\n",
-            cfg->val1
-        );
+        
 
 
         return true;
@@ -759,11 +493,7 @@ static bool parse_duration_rule(
         cfg->val2 = 0;
 
 
-        printf(
-            "[PARSER][DUR] Modo: LESS\n"
-            "[PARSER][DUR] val1: %.3f segundos\n",
-            cfg->val1
-        );
+        
 
 
         return true;
@@ -835,13 +565,7 @@ static bool parse_duration_rule(
         cfg->val2 = val2;
 
 
-        printf(
-            "[PARSER][DUR] Modo: RANGE\n"
-            "[PARSER][DUR] val1: %.3f\n"
-            "[PARSER][DUR] val2: %.3f\n",
-            cfg->val1,
-            cfg->val2
-        );
+        
 
 
         return true;
@@ -878,19 +602,12 @@ bool parse_args(
         "\n========== PARSER ==========\n"
     );
 
-    printf(
-        "[PARSER] argc = %d\n",
-        argc
-    );
+    
 
 
     for (int i = 0; i < argc; i++) {
 
-        printf(
-            "[PARSER] argv[%d] = '%s'\n",
-            i,
-            argv[i]
-        );
+        
     }
 
 
@@ -912,19 +629,12 @@ bool parse_args(
     );
 
 
-    printf(
-        "[PARSER] Diretorio alvo: '%s'\n",
-        cfg->target_dir
-    );
+    
 
 
     for (int i = 2; i < argc; i++) {
 
-        printf(
-            "\n[PARSER] Processando argv[%d] = '%s'\n",
-            i,
-            argv[i]
-        );
+        
 
 
         /*
@@ -975,19 +685,14 @@ bool parse_args(
                 }
 
 
-                printf(
-                    "[PARSER] Extensao especifica: '%s'\n",
-                    cfg->ext.specific_ext
-                );
+                
 
             } else {
 
                 cfg->ext.mode =
                     MODE_ALL;
 
-                printf(
-                    "[PARSER] Extensao: TODAS\n"
-                );
+                
             }
 
 
@@ -1125,68 +830,32 @@ bool parse_args(
     );
 
 
-    printf(
-        "[PARSER] target_dir = '%s'\n",
-        cfg->target_dir
-    );
+    
 
 
-    printf(
-        "[PARSER] ext.active = %d\n",
-        cfg->ext.active
-    );
+    
 
-    printf(
-        "[PARSER] ext.mode = %d\n",
-        cfg->ext.mode
-    );
+    
 
-    printf(
-        "[PARSER] ext.specific_ext = '%s'\n",
-        cfg->ext.specific_ext
-    );
+    
 
 
-    printf(
-        "[PARSER] size.active = %d\n",
-        cfg->size.active
-    );
+    
 
-    printf(
-        "[PARSER] size.mode = %d\n",
-        cfg->size.mode
-    );
+    
 
-    printf(
-        "[PARSER] size.val1 = %lld\n",
-        cfg->size.val1
-    );
+    
 
-    printf(
-        "[PARSER] size.val2 = %lld\n",
-        cfg->size.val2
-    );
+    
 
 
-    printf(
-        "[PARSER] dur.active = %d\n",
-        cfg->dur.active
-    );
+    
 
-    printf(
-        "[PARSER] dur.mode = %d\n",
-        cfg->dur.mode
-    );
+    
 
-    printf(
-        "[PARSER] dur.val1 = %.3f\n",
-        cfg->dur.val1
-    );
+    
 
-    printf(
-        "[PARSER] dur.val2 = %.3f\n",
-        cfg->dur.val2
-    );
+    
 
 
     printf(
@@ -1250,10 +919,7 @@ int main(
         "\n========== DIRETORIO ==========\n"
     );
 
-    printf(
-        "[MAIN] Abrindo: '%s'\n",
-        cfg.target_dir
-    );
+    
 
 
     DIR *d =
@@ -1302,10 +968,7 @@ int main(
             "\n----------------------------------------\n"
         );
 
-        printf(
-            "[MAIN] Entrada: '%s'\n",
-            dir->d_name
-        );
+        
 
 
         if (strcmp(
@@ -1317,9 +980,7 @@ int main(
                 ".."
             ) == 0) {
 
-            printf(
-                "[MAIN] Ignorando entrada especial.\n"
-            );
+            
 
             continue;
         }
@@ -1327,9 +988,7 @@ int main(
 
         if (dir->d_type != DT_REG) {
 
-            printf(
-                "[MAIN] Ignorando: nao e arquivo regular.\n"
-            );
+            
 
             continue;
         }
@@ -1347,10 +1006,7 @@ int main(
         );
 
 
-        printf(
-            "[MAIN] Arquivo: '%s'\n",
-            filepath
-        );
+        
 
 
         long long size_val = 0;
@@ -1361,9 +1017,7 @@ int main(
          * EXTENSAO
          */
 
-        printf(
-            "\n[MAIN] ===== FILTRO EXTENSAO =====\n"
-        );
+        
 
 
         if (!match_ext(
@@ -1371,9 +1025,7 @@ int main(
                 &cfg.ext
             )) {
 
-            printf(
-                "[MAIN] Arquivo rejeitado pelo filtro de extensao.\n"
-            );
+            
 
             skipped_files++;
 
@@ -1385,9 +1037,7 @@ int main(
          * TAMANHO
          */
 
-        printf(
-            "\n[MAIN] ===== FILTRO TAMANHO =====\n"
-        );
+        
 
 
         if (!match_size(
@@ -1396,9 +1046,7 @@ int main(
                 &size_val
             )) {
 
-            printf(
-                "[MAIN] Arquivo rejeitado pelo filtro de tamanho.\n"
-            );
+            
 
             skipped_files++;
 
@@ -1410,9 +1058,7 @@ int main(
          * DURACAO
          */
 
-        printf(
-            "\n[MAIN] ===== FILTRO DURACAO =====\n"
-        );
+        
 
 
         if (!match_dur(
@@ -1421,9 +1067,7 @@ int main(
                 &dur_val
             )) {
 
-            printf(
-                "[MAIN] Arquivo rejeitado pelo filtro de duracao.\n"
-            );
+            
 
             skipped_files++;
 
@@ -1459,9 +1103,7 @@ int main(
 
         if (cfg.ext.active) {
 
-            printf(
-                "[MAIN] Destino determinado por EXTENSAO.\n"
-            );
+            
 
             get_ext_foldername(
                 dir->d_name,
@@ -1477,9 +1119,7 @@ int main(
             )
         ) {
 
-            printf(
-                "[MAIN] Destino determinado por TAMANHO.\n"
-            );
+            
 
             get_size_foldername(
                 size_val,
@@ -1495,9 +1135,7 @@ int main(
             )
         ) {
 
-            printf(
-                "[MAIN] Destino determinado por DURACAO.\n"
-            );
+            
 
             get_dur_foldername(
                 dur_val,
@@ -1507,16 +1145,11 @@ int main(
 
         } else {
 
-            printf(
-                "[MAIN] Usando destino fallback: Organizado.\n"
-            );
+            
         }
 
 
-        printf(
-            "[MAIN] Pasta destino: '%s'\n",
-            dest_folder_name
-        );
+        
 
 
         /*
@@ -1541,15 +1174,9 @@ int main(
         );
 
 
-        printf(
-            "[MAIN] Origem : '%s'\n",
-            filepath
-        );
+        
 
-        printf(
-            "[MAIN] Destino: '%s'\n",
-            dest_file
-        );
+        
 
 
         /*
@@ -1565,9 +1192,7 @@ int main(
          * Move
          */
 
-        printf(
-            "[MAIN] Executando rename()...\n"
-        );
+        
 
 
         if (rename(
