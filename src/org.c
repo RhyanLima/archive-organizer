@@ -19,16 +19,9 @@
 #define BYTES_MB (1024LL * 1024LL)
 #define BYTES_GB (1024LL * 1024LL * 1024LL)
 
-
-/* =========================================================
- * HELP
- * ========================================================= */
-
 void print_help(void) {
 
-    printf(
-        "Uso: org <diretorio> [opcoes]\n\n"
-    );
+    printf("Uso: org <diretorio> [opcoes]\n\n");
 
     printf(
         "Orquestrador de arquivos. "
@@ -97,98 +90,50 @@ void print_help(void) {
  * DIRETORIO
  * ========================================================= */
 
-void create_dir_if_not_exists(
-    const char *dir
-) {
+void create_dir_if_not_exists(const char *dir) {
+    
     struct stat st = {0};
-
-    printf(
-        "[DIR] Verificando diretorio: '%s'\n",
-        dir
-    );
-
 
     if (stat(dir, &st) == -1) {
 
-        printf(
-            "[DIR] Diretorio nao existe.\n"
-        );
-
-        printf(
-            "[DIR] Criando: '%s'\n",
-            dir
-        );
-
+        printf("[DIR] Diretorio nao existe.\n");
 
         if (mkdir(dir, 0755) != 0) {
-
-            perror(
-                "[DIR] ERRO: mkdir"
-            );
-
+            perror("[DIR] ERRO: mkdir");
             return;
         }
 
-
-        printf(
-            "[DIR] Diretorio criado com sucesso.\n"
-        );
+        printf("[DIR] Diretorio criado com sucesso.\n");
 
     } else {
-
+        
         if (S_ISDIR(st.st_mode)) {
-
-            printf(
-                "[DIR] Diretorio ja existe.\n"
-            );
-
+            printf("[DIR] Diretorio ja existe.\n");
         } else {
-
-            printf(
-                "[DIR] ERRO: caminho existe mas nao e diretorio.\n"
-            );
+            printf("[DIR] ERRO: caminho existe mas nao e diretorio.\n");
         }
     }
 }
 
-
-/* =========================================================
- * UTILITARIOS DO PARSER
- * ========================================================= */
-
-static void trim_spaces(
-    char *str
-) {
+static void trim_spaces(char *str) {
+    
     if (!str) {
         return;
     }
 
-
     char *start = str;
 
-    while (isspace(
-        (unsigned char)*start
-    )) {
+    while (isspace((unsigned char)*start)) {
         start++;
     }
 
-
     if (start != str) {
-        memmove(
-            str,
-            start,
-            strlen(start) + 1
-        );
+        memmove(str, start, strlen(start) + 1);
     }
-
 
     size_t len = strlen(str);
 
-    while (len > 0 &&
-           isspace(
-               (unsigned char)str[len - 1]
-           )) {
-
+    while (len > 0 && isspace((unsigned char)str[len - 1])) {
         str[len - 1] = '\0';
         len--;
     }

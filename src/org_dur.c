@@ -1,4 +1,4 @@
-#include "org_dur.h"
+#include "../include/org_dur.h"
 
 #include <stdio.h>
 #include <stdlib.h>
