@@ -1,0 +1,28 @@
+Uso: org <diretorio> [opcoes]
+
+Orquestrador de arquivos. Filtros podem ser combinados.
+
+Opcoes:
+  -x [ext]         Organiza por extensao
+                     -x mp3
+                     -x para todas
+  -s <regra>       Organiza por tamanho
+                     >5M
+                     <10M
+                     5M-15M
+                     band:2M
+                     >1G
+                     band:2G
+  -d <regra>       Organiza por duracao em segundos
+                     >300
+                     <60
+                     60-120
+                     band:300
+  -h, --help       Exibe esta ajuda
+
+Exemplos:
+  org ./downloads -x mp3
+  org ./downloads -x -s band:2M
+  org ./downloads -s 5M-15M
+  org ./downloads -d >300
+  org ./downloads -x mp4 -d band:300

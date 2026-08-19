@@ -65,8 +65,8 @@ A função `rename()` do C é usada para mover o arquivo. No Linux, se a origem 
 
 ## 4. Compilar
 
-Compile todos os módulos em conjunto usando:
+O projeto conta com um `Makefile`. Para compilar todos os módulos e incorporar o texto de ajuda no binário, simplesmente execute:
 
-```c
-gcc -Wall org.c org_ext.c org_size.c org_dur.c -o org
+```bash
+make
 ```

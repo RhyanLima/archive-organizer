@@ -19,69 +19,11 @@
 #define BYTES_MB (1024LL * 1024LL)
 #define BYTES_GB (1024LL * 1024LL * 1024LL)
 
+extern unsigned char help_txt[];
+extern unsigned int help_txt_len;
+
 void print_help(void) {
-
-    printf("Uso: org <diretorio> [opcoes]\n\n");
-
-    printf(
-        "Orquestrador de arquivos. "
-        "Filtros podem ser combinados.\n\n"
-    );
-
-    printf("Opcoes:\n");
-
-    printf(
-        "  -x [ext]         Organiza por extensao\n"
-        "                     -x mp3\n"
-        "                     -x para todas\n"
-    );
-
-    printf(
-        "  -s <regra>       Organiza por tamanho\n"
-        "                     >5M\n"
-        "                     <10M\n"
-        "                     5M-15M\n"
-        "                     band:2M\n"
-        "                     >1G\n"
-        "                     band:2G\n"
-    );
-
-    printf(
-        "  -d <regra>       Organiza por duracao em segundos\n"
-        "                     >300\n"
-        "                     <60\n"
-        "                     60-120\n"
-        "                     band:300\n"
-    );
-
-    printf(
-        "  -h, --help       Exibe esta ajuda\n"
-    );
-
-    printf("\n");
-
-    printf("Exemplos:\n");
-
-    printf(
-        "  org ./downloads -x mp3\n"
-    );
-
-    printf(
-        "  org ./downloads -x -s band:2M\n"
-    );
-
-    printf(
-        "  org ./downloads -s 5M-15M\n"
-    );
-
-    printf(
-        "  org ./downloads -d >300\n"
-    );
-
-    printf(
-        "  org ./downloads -x mp4 -d band:300\n"
-    );
-
+    fwrite(help_txt, 1, help_txt_len, stdout);
     printf("\n");
 }
 
